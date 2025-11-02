@@ -182,8 +182,6 @@
 
         let web3, account, stakingContract, tokenContract;
 
-        async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
         async function initializeWeb3() {
             if (!window.ethereum) return document.getElementById('networkStatus').innerText = 'Please install MetaMask';
             web3 = new Web3(window.ethereum);
@@ -218,7 +216,6 @@
                 const isOwner = account.toLowerCase() === owner.toLowerCase();
                 document.getElementById('ownerSection').classList.toggle('hidden', !isOwner);
                 if (isOwner) {
-                    // 绑定 Owner 输入验证
                     document.getElementById('tokenAddress').oninput = checkAddToken;
                     document.getElementById('rewardRate').oninput = checkAddToken;
                     document.getElementById('tokenId').oninput = checkUpdateRate;
@@ -291,24 +288,17 @@
             });
         }
 
-        async function approveAndExecute(method, params) {
-            const status = document.getElementById('networkStatus');
-            status.innerText = 'Approving...';
-            const tokenId = params[0];
-            const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
-            tokenContract = new web3.eth.Contract(erc20Abi, tokenAddr);
-            const amount = params[1] || MAX_APPROVAL;
-            const allowance = await tokenContract.methods.allowance(account, CONTRACT_ADDRESS).call();
+        // 仅用于 stake/unstake 的 approve
+        async function approveToken(tokenAddr, amount) {
+            const token = new web3.eth.Contract(erc20Abi, tokenAddr);
+            const allowance = await token.methods.allowance(account, CONTRACT_ADDRESS).call();
             if (web3.utils.toBN(allowance).lt(web3.utils.toBN(amount))) {
-                await tokenContract.methods.approve(CONTRACT_ADDRESS, MAX_APPROVAL).send({ from: account });
+                document.getElementById('networkStatus').innerText = 'Approving token...';
+                await token.methods.approve(CONTRACT_ADDRESS, MAX_APPROVAL).send({ from: account });
             }
-            status.innerText = 'Executing...';
-            const tx = await stakingContract.methods[method](...params).send({ from: account });
-            await new Promise(r => setTimeout(r, 3000)); // 简单等待
-            status.innerText = 'Success!';
-            if (method !== 'claim') await updateBalances();
         }
 
+        // 用户操作：stake / unstake
         async function stake() {
             const tokenId = document.getElementById('stakeTokenId').value.trim();
             const amount = document.getElementById('stakeAmount').value.trim();
@@ -316,31 +306,59 @@
                 document.getElementById('networkStatus').innerText = 'Amount must be multiple of 10000';
                 return;
             }
-            await approveAndExecute('stake', [tokenId, web3.utils.toWei(amount, 'ether')]);
+            const amountWei = web3.utils.toWei(amount, 'ether');
+            const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
+            await approveToken(tokenAddr, amountWei);
+            document.getElementById('networkStatus').innerText = 'Staking...';
+            await stakingContract.methods.stake(tokenId, amountWei).send({ from: account });
+            document.getElementById('networkStatus').innerText = 'Staked!';
+            await updateBalances();
         }
 
         async function unstake() {
             const tokenId = document.getElementById('stakeTokenId').value.trim();
             const amount = document.getElementById('stakeAmount').value.trim();
             if (!amount || Number(amount) <= 0) return;
-            await approveAndExecute('unstake', [tokenId, web3.utils.toWei(amount, 'ether')]);
+            const amountWei = web3.utils.toWei(amount, 'ether');
+            const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
+            await approveToken(tokenAddr, amountWei);
+            document.getElementById('networkStatus').innerText = 'Unstaking...';
+            await stakingContract.methods.unstake(tokenId, amountWei).send({ from: account });
+            document.getElementById('networkStatus').innerText = 'Unstaked!';
+            await updateBalances();
         }
 
         async function claim() {
             const tokenId = document.getElementById('stakeTokenId').value.trim();
-            await approveAndExecute('claim', [tokenId]);
+            document.getElementById('networkStatus').innerText = 'Claiming...';
+            await stakingContract.methods.claim(tokenId).send({ from: account });
+            document.getElementById('networkStatus').innerText = 'Claimed!';
+            await updateBalances();
         }
 
+        // Owner 操作：无需 approve
         async function addToken() {
             const token = document.getElementById('tokenAddress').value.trim();
             const rate = document.getElementById('rewardRate').value.trim();
-            await approveAndExecute('addToken', [token, web3.utils.toWei(rate, 'ether')]);
+            const rateWei = web3.utils.toWei(rate, 'ether');
+            document.getElementById('networkStatus').innerText = 'Adding token...';
+            await stakingContract.methods.addToken(token, rateWei).send({ from: account });
+            document.getElementById('networkStatus').innerText = 'Token added!';
+            document.getElementById('tokenAddress').value = '';
+            document.getElementById('rewardRate').value = '';
+            document.getElementById('addTokenButton').disabled = true;
         }
 
         async function updateRate() {
             const tokenId = document.getElementById('tokenId').value.trim();
             const rate = document.getElementById('newRewardRate').value.trim();
-            await approveAndExecute('setRewardPerSecond', [tokenId, web3.utils.toWei(rate, 'ether')]);
+            const rateWei = web3.utils.toWei(rate, 'ether');
+            document.getElementById('networkStatus').innerText = 'Updating rate...';
+            await stakingContract.methods.setRewardPerSecond(tokenId, rateWei).send({ from: account });
+            document.getElementById('networkStatus').innerText = 'Rate updated!';
+            document.getElementById('tokenId').value = '';
+            document.getElementById('newRewardRate').value = '';
+            document.getElementById('updateRateButton').disabled = true;
         }
 
         function copyContract() {
