@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GDOG Staking</title>
+    <link rel="icon" type="image/png" href="https://www.woofswap.finance/image/tokens/gdog.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0068FF',
+                        secondary: '#18E5A0',
+                        accent: '#FFD700',
+                        dark: '#070808',
+                        'light-gray': '#E5E7EB'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Changa One', 'system-ui', 'sans-serif']
+                    },
+                    animation: { 'float': 'float 3s ease-in-out infinite' },
+                    keyframes: { float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } } }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow-glow { text-shadow: 0 0 10px rgba(0, 104, 255, 0.5); }
+            .glow-border { box-shadow: 0 0 12px rgba(24, 229, 160, 0.3); }
+            .bg-grid { background-image: url('data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1" fill="%230068FF" fill-opacity="0.1"/%3E%3C/svg%3E'); background-size: 20px 20px; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Changa+One&display=swap" rel="stylesheet">
+</head>
+<body class="bg-dark text-white font-sans overflow-x-hidden">
+    <header class="fixed w-full z-50 bg-dark/90 backdrop-blur-md transition-all duration-300" id="navbar">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer hover:text-primary transition-colors">
+                <div class="w-10 h-10 rounded-full overflow-hidden">
+                    <img src="https://www.woofswap.finance/image/tokens/gdog.png" alt="GDOG Logo" class="w-full h-full object-cover">
+                </div>
+                <span class="font-display text-3xl text-primary text-shadow-glow">GDOG Staking</span>
+            </div>
+            <button id="menuToggle" class="md:hidden text-2xl text-primary">
+                <i class="fa fa-bars"></i>
+            </button>
+        </div>
+        <div id="mobileMenu" class="md:hidden bg-dark/95 absolute w-full top-full py-4 px-4 hidden">
+            <div class="flex flex-col space-y-4">
+                <a href="#staking" class="hover:text-primary transition-colors py-2 text-white">Staking</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="staking" class="min-h-screen pt-24 pb-16 bg-grid relative overflow-hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-gradient-to-b from-primary/10 to-dark pointer-events-none"></div>
+        <div class="absolute top-0 left-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 w-80 h-80 bg-secondary/10 rounded-full blur-3xl"></div>
+        <div class="container mx-auto px-4 text-center relative z-10">
+            <div class="w-48 h-48 mx-auto mb-8 animate-float">
+                <img src="https://www.woofswap.finance/image/tokens/gdog.png" alt="GDOG Logo" class="w-full h-full object-cover rounded-full border-4 border-secondary/50 glow-border">
+            </div>
+            <h1 class="font-display text-5xl md:text-7xl mb-6 text-primary text-shadow-glow">GDOG Staking</h1>
+            <p class="text-xl md:text-2xl text-light-gray max-w-3xl mx-auto mb-10">
+                Stake tokens to earn rewards per second.
+            </p>
+
+            <div class="bg-dark/50 p-6 rounded-lg border border-primary/30 max-w-2xl mx-auto">
+                <div class="flex flex-col space-y-4">
+                    <button id="connectWalletButton" class="px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/80 transition-all">Connect Wallet</button>
+                    <p id="networkStatus" class="text-light-gray text-sm">Click to connect wallet...</p>
+
+                    <div class="flex items-center bg-dark/80 p-3 rounded-lg border border-primary/20">
+                        <i class="fa fa-link text-accent mr-3"></i>
+                        <span class="font-mono text-sm text-white truncate">0x1bE6CC7dFd5DBD9a32cE29566ae81ecc69AdE154</span>
+                        <button class="ml-3 text-light-gray hover:text-secondary transition-colors" onclick="copyContract()">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+
+                    <div class="bg-dark/80 p-3 rounded-lg border border-primary/20 text-left">
+                        <p id="balanceStatus" class="text-light-gray text-sm">
+                            GT Balance: 0<br>
+                            Staked: 0<br>
+                            Pending Rewards: 0<br>
+                            Claimed Rewards: 0
+                        </p>
+                    </div>
+
+                    <!-- Owner Panel -->
+                    <div id="ownerSection" class="hidden space-y-4">
+                        <h3 class="text-lg font-bold text-secondary">Owner Controls</h3>
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">Token Address</label>
+                            <input type="text" id="tokenAddress" placeholder="ERC20 token address" class="w-full px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                        </div>
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">Reward Per Second</label>
+                            <input type="text" id="rewardRate" placeholder="e.g. 0.001" class="w-full px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                        </div>
+                        <button id="addTokenButton" class="w-full px-6 py-3 bg-secondary text-dark rounded-full font-medium hover:bg-secondary/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Add Token</button>
+
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">Token ID</label>
+                            <input type="text" id="tokenId" placeholder="Token ID to update" class="w-full px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                        </div>
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">New Reward Per Second</label>
+                            <input type="text" id="newRewardRate" placeholder="New reward rate" class="w-full px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                        </div>
+                        <button id="updateRateButton" class="w-full px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Update Rate</button>
+                    </div>
+
+                    <!-- User Staking Panel -->
+                    <div id="userSection" class="space-y-4">
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">Token ID</label>
+                            <input type="text" id="stakeTokenId" placeholder="Enter token ID" class="w-full px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                        </div>
+                        <div>
+                            <label class="block text-left text-light-gray mb-1">Amount (×10000)</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="stakeAmount" placeholder="e.g. 10000" class="flex-1 px-4 py-2 bg-dark/80 border border-primary/20 rounded-lg text-white focus:outline-none focus:border-secondary">
+                                <button id="maxStakeButton" class="px-4 py-2 bg-secondary text-dark rounded-lg font-medium hover:bg-secondary/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Max</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="stakeButton" class="px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Stake</button>
+                            <button id="unstakeButton" class="px-6 py-3 bg-accent text-dark rounded-full font-medium hover:bg-accent/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Unstake</button>
+                        </div>
+                        <button id="claimButton" class="w-full px-6 py-3 bg-secondary text-dark rounded-full font-medium hover:bg-secondary/80 transition-all disabled:bg-dark/50 disabled:cursor-not-allowed" disabled>Claim Rewards</button>
+                    </div>
+
+                    <div class="mt-4">
+                        <img src="https://www.woofswap.finance/image/tokens/gdog.png" alt="GDOG Logo" class="w-16 h-16 mx-auto animate-float">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark/95 py-12 border-t border-primary/20">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-light-gray text-sm">© 2025 GDOG Staking. DYOR and stake responsibly.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+    <script>
+        const CONTRACT_ADDRESS = '0x1bE6CC7dFd5DBD9a32cE29566ae81ecc69AdE154';
+        const STAKE_UNIT = '10000';
+        const MAX_APPROVAL = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+
+        const erc20Abi = [
+            {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
+            {"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"type":"function"},
+            {"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"},
+            {"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}
+        ];
+
+        const contractAbi = [
+            {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"rewardPerSecond","type":"uint256"}],"name":"addToken","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"rewardPerSecond","type":"uint256"}],"name":"setRewardPerSecond","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pending","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserStaked","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"tokenList","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"tokenToId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+        ];
+
+        const chains = {
+            GateLayer: {
+                chainId: 10088,
+                chainName: 'Gate Layer',
+                rpcUrl: 'https://gatelayer-rpc.gatenode.cc',
+                blockExplorer: 'https://www.gatescan.org/gatelayer/',
+                nativeCurrency: { name: 'GT', symbol: 'GT', decimals: 18 }
+            }
+        };
+
+        let web3, account, stakingContract, tokenContract;
+
+        async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+        async function retry(fn, max = 3) { for (let i = 1; i <= max; i++) { try { return await fn(); } catch { if (i === max) throw e; await delay(500); } } }
+
+        async function initializeWeb3() {
+            if (!window.ethereum) return document.getElementById('networkStatus').innerText = 'Please install MetaMask';
+            web3 = new Web3(window.ethereum);
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                account = (await web3.eth.getAccounts())[0];
+                document.getElementById('connectWalletButton').innerText = `Connected: ${account.slice(0,6)}...${account.slice(-4)}`;
+                await switchNetwork('GateLayer');
+                stakingContract = new web3.eth.Contract(contractAbi, CONTRACT_ADDRESS);
+                await updateAll();
+                document.getElementById('networkStatus').innerText = 'Connected to GateLayer';
+            } catch (e) {
+                document.getElementById('networkStatus').innerText = 'Connection failed: ' + (e.message || 'Unknown');
+            }
+        }
+
+        async function switchNetwork(chain) {
+            const c = chains[chain];
+            try {
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${c.chainId.toString(16)}` }] });
+            } catch (e) {
+                if (e.code === 4902) {
+                    await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [c] });
+                } else throw e;
+            }
+        }
+
+        async function updateAll() {
+            if (!account) return;
+            try {
+                const owner = await stakingContract.methods.owner().call();
+                document.getElementById('ownerSection').classList.toggle('hidden', account.toLowerCase() !== owner.toLowerCase());
+                await updateBalances();
+                setInterval(updateBalances, 10000);
+            } catch (e) { console.error(e); }
+        }
+
+        async function updateBalances() {
+            if (!account) return;
+            const tokenId = document.getElementById('stakeTokenId').value.trim();
+            if (!tokenId || isNaN(tokenId) || Number(tokenId) <= 0) {
+                document.getElementById('balanceStatus').innerHTML = 'Enter valid Token ID';
+                disableUserButtons();
+                return;
+            }
+
+            try {
+                const gt = web3.utils.fromWei(await web3.eth.getBalance(account), 'ether');
+                const staked = web3.utils.fromWei(await stakingContract.methods.getUserStaked(tokenId, account).call(), 'ether');
+                const pending = web3.utils.fromWei(await stakingContract.methods.pending(tokenId, account).call(), 'ether');
+                const claimed = web3.utils.fromWei(await stakingContract.methods.getUserBalance(tokenId, account).call(), 'ether');
+
+                document.getElementById('balanceStatus').innerHTML = `
+                    GT Balance: ${Number(gt).toFixed(4)}<br>
+                    Staked: ${Number(staked).toFixed(4)}<br>
+                    Pending Rewards: ${Number(pending).toFixed(6)}<br>
+                    Claimed Rewards: ${Number(claimed).toFixed(4)}
+                `;
+
+                const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
+                if (tokenAddr === '0x0000000000000000000000000000000000000000') throw new Error('Invalid tokenId');
+                tokenContract = new web3.eth.Contract(erc20Abi, tokenAddr);
+                const bal = await tokenContract.methods.balanceOf(account).call();
+                const balFmt = Number(web3.utils.fromWei(bal, 'ether')).toFixed(4);
+                document.getElementById('maxStakeButton').dataset.max = Math.floor(balFmt / 10000) * 10000;
+                document.getElementById('maxStakeButton').disabled = false;
+
+                enableUserButtons(tokenId, staked > 0);
+            } catch (e) {
+                document.getElementById('balanceStatus').innerHTML = 'Invalid Token ID or error';
+                disableUserButtons();
+            }
+        }
+
+        function enableUserButtons(tokenId, hasStaked) {
+            document.getElementById('stakeButton').disabled = false;
+            document.getElementById('unstakeButton').disabled = !hasStaked;
+            document.getElementById('claimButton').disabled = false;
+        }
+
+        function disableUserButtons() {
+            document.getElementById('stakeButton').disabled = true;
+            document.getElementById('unstakeButton').disabled = true;
+            document.getElementById('claimButton').disabled = true;
+            document.getElementById('maxStakeButton').disabled = true;
+        }
+
+        async function approveAndExecute(method, params) {
+            const status = document.getElementById('networkStatus');
+            const tokenId = params[0];
+            const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
+            tokenContract = new web3.eth.Contract(erc20Abi, tokenAddr);
+            const amount = params[1] || 0;
+            const allowance = await tokenContract.methods.allowance(account, CONTRACT_ADDRESS).call();
+            if (web3.utils.toBN(allowance).lt(web3.utils.toBN(amount))) {
+                status.innerText = 'Approving...';
+                await tokenContract.methods.approve(CONTRACT_ADDRESS, MAX_APPROVAL).send({ from: account });
+            }
+            status.innerText = 'Executing...';
+            const tx = await stakingContract.methods[method](...params).send({ from: account });
+            await web3.eth.getTransactionReceipt(tx.transactionHash);
+            status.innerText = 'Success!';
+            await updateBalances();
+        }
+
+        async function stake() {
+            const tokenId = document.getElementById('stakeTokenId').value.trim();
+            const amount = document.getElementById('stakeAmount').value.trim();
+            if (!tokenId || !amount || Number(amount) % 10000 !== 0 || Number(amount) <= 0) return document.getElementById('networkStatus').innerText = 'Amount must be multiple of 10000';
+            await approveAndExecute('stake', [tokenId, web3.utils.toWei(amount, 'ether')]);
+        }
+
+        async function unstake() {
+            const tokenId = document.getElementById('stakeTokenId').value.trim();
+            const amount = document.getElementById('stakeAmount').value.trim();
+            if (!amount || Number(amount) <= 0) return;
+            await approveAndExecute('unstake', [tokenId, web3.utils.toWei(amount, 'ether')]);
+        }
+
+        async function claim() {
+            const tokenId = document.getElementById('stakeTokenId').value.trim();
+            await approveAndExecute('claim', [tokenId]);
+        }
+
+        async function addToken() {
+            const token = document.getElementById('tokenAddress').value.trim();
+            const rate = document.getElementById('rewardRate').value.trim();
+            if (!web3.utils.isAddress(token) || !rate || isNaN(rate)) return;
+            await approveAndExecute('addToken', [token, web3.utils.toWei(rate, 'ether')]);
+        }
+
+        async function updateRate() {
+            const tokenId = document.getElementById('tokenId').value.trim();
+            const rate = document.getElementById('newRewardRate').value.trim();
+            if (!tokenId || !rate) return;
+            await approveAndExecute('setRewardPerSecond', [tokenId, web3.utils.toWei(rate, 'ether')]);
+        }
+
+        function copyContract() {
+            navigator.clipboard.writeText(CONTRACT_ADDRESS).then(() => {
+                const n = document.createElement('div');
+                n.className = 'fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                n.textContent = 'Copied!';
+                document.body.appendChild(n);
+                setTimeout(() => n.remove(), 2000);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('connectWalletButton').onclick = initializeWeb3;
+            document.getElementById('stakeButton').onclick = stake;
+            document.getElementById('unstakeButton').onclick = unstake;
+            document.getElementById('claimButton').onclick = claim;
+            document.getElementById('addTokenButton').onclick = addToken;
+            document.getElementById('updateRateButton').onclick = updateRate;
+            document.getElementById('maxStakeButton').onclick = () => {
+                const max = document.getElementById('maxStakeButton').dataset.max;
+                if (max) document.getElementById('stakeAmount').value = max;
+            };
+            document.getElementById('stakeTokenId').oninput = updateBalances;
+            ['tokenAddress', 'rewardRate', 'tokenId', 'newRewardRate'].forEach(id => {
+                document.getElementById(id).oninput = () => {
+                    const valid = document.getElementById(id.replace(/^(token|new)/, '')).value && !isNaN(document.getElementById(id).value);
+                    document.getElementById(id === 'tokenAddress' || id === 'rewardRate' ? 'addTokenButton' : 'updateRateButton').disabled = !valid;
+                };
+            });
+        });
+    </script>
+</body>
+</html>
