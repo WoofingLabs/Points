@@ -235,7 +235,7 @@
             const id = document.getElementById('tokenId').value.trim();
             const rate = document.getElementById('newRewardRate').value.trim();
             const valid = id && !isNaN(id) && Number(id) > 0 && rate && !isNaN(rate);
-            document.getElementById('updateRateButton').disabled = !valid;
+            document.get43ElementById('updateRateButton').disabled = !valid;
         }
 
         document.getElementById('stakeTokenId').oninput = updateBalances;
@@ -254,18 +254,21 @@
                 const pending = Number(web3.utils.fromWei(await stakingContract.methods.pending(tokenId, account).call(), 'ether')).toFixed(6);
                 const claimed = Number(web3.utils.fromWei(await stakingContract.methods.getUserBalance(tokenId, account).call(), 'ether')).toFixed(4);
 
-                document.getElementById('balanceStatus').innerHTML = `
-                    GT Balance: ${gt}<br>
-                    Staked: ${staked}<br>
-                    Pending Rewards: ${pending}<br>
-                    Claimed Rewards: ${claimed}
-                `;
-
                 const tokenAddr = await stakingContract.methods.tokenList(tokenId).call();
                 if (tokenAddr === '0x0000000000000000000000000000000000000000') throw new Error();
                 tokenContract = new web3.eth.Contract(erc20Abi, tokenAddr);
                 const bal = await tokenContract.methods.balanceOf(account).call();
-                const maxUnits = Math.floor(Number(web3.utils.fromWei(bal, 'ether')) / 10000);
+                const tokenBalance = Number(web3.utils.fromWei(bal, 'ether')).toFixed(4);
+                const maxUnits = Math.floor(Number(tokenBalance) / 10000);
+
+                document.getElementById('balanceStatus').innerHTML = `
+                    <strong>Token Balance:</strong> ${tokenBalance}<br>
+                    <strong>Staked:</strong> ${staked}<br>
+                    <strong>Pending Rewards:</strong> ${pending}<br>
+                    <strong>Claimed Rewards:</strong> ${claimed}<br>
+                    <span class="text-xs text-secondary">Max Stake: ${maxUnits * 10000} (×10000)</span>
+                `;
+
                 document.getElementById('maxStakeButton').dataset.max = maxUnits * 10000;
                 document.getElementById('maxStakeButton').disabled = maxUnits === 0;
 
@@ -288,7 +291,6 @@
             });
         }
 
-        // 仅用于 stake/unstake 的 approve
         async function approveToken(tokenAddr, amount) {
             const token = new web3.eth.Contract(erc20Abi, tokenAddr);
             const allowance = await token.methods.allowance(account, CONTRACT_ADDRESS).call();
@@ -298,7 +300,6 @@
             }
         }
 
-        // 用户操作：stake / unstake
         async function stake() {
             const tokenId = document.getElementById('stakeTokenId').value.trim();
             const amount = document.getElementById('stakeAmount').value.trim();
@@ -336,7 +337,6 @@
             await updateBalances();
         }
 
-        // Owner 操作：无需 approve
         async function addToken() {
             const token = document.getElementById('tokenAddress').value.trim();
             const rate = document.getElementById('rewardRate').value.trim();
@@ -373,7 +373,10 @@
 
         document.getElementById('maxStakeButton').onclick = () => {
             const max = document.getElementById('maxStakeButton').dataset.max;
-            if (max) document.getElementById('stakeAmount').value = max;
+            if (max) {
+                document.getElementById('stakeAmount').value = max;
+                document.getElementById('networkStatus').innerText = `Max stake set: ${max}`;
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
